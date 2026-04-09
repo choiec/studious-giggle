@@ -47,9 +47,8 @@ jobs:
       - name: Ensure Gradle wrapper is executable
         run: chmod +x gradlew
 
-      - name: Build project
-        # CodeQL scans the production build; compiling test sources here can OOM the hosted runner.
-        run: ./gradlew --no-daemon classes
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v4

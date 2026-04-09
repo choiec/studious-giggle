@@ -3,10 +3,17 @@ package org.cherrypick.picker.documents.infrastructure.persistence
 import org.cherrypick.picker.documents.domain.Document
 import org.cherrypick.picker.documents.domain.DocumentRepository
 import org.cherrypick.picker.shared.ids.DocumentId
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Repository
 import java.util.LinkedHashMap
 
 @Repository
+@ConditionalOnProperty(
+    prefix = "picker.persistence",
+    name = ["mode"],
+    havingValue = "in-memory",
+    matchIfMissing = true,
+)
 internal class InMemoryDocumentRepository : DocumentRepository {
     private val documents = LinkedHashMap<String, Document>()
 

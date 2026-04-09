@@ -1,0 +1,19 @@
+spring:
+  config:
+    activate:
+      on-profile: jpa-test
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:picker-jpa;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+picker:
+  persistence:
+    mode: jpa

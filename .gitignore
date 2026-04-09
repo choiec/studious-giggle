@@ -17,3 +17,5 @@ replay_pid*
 !gradle/wrapper/gradle-wrapper.jar
 
 .vscode/settings.json
+
+plans/
