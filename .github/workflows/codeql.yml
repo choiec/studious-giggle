@@ -47,9 +47,8 @@ jobs:
       - name: Ensure Gradle wrapper is executable
         run: chmod +x gradlew
 
-      - name: Build project
-        # Run the full production build lifecycle so CodeQL can observe Kotlin and Java compilation without running tests.
-        run: ./gradlew --no-daemon build -x test
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v4
