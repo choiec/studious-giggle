@@ -1,0 +1,119 @@
+name: PRD To PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      prd:
+        description: One-line PRD or scoped delivery request
+        required: true
+        type: string
+      base_branch:
+        description: Base branch for the Copilot coding agent task
+        required: true
+        default: main
+        type: string
+      custom_agent:
+        description: Custom agent id to use when assigning the issue
+        required: true
+        default: delivery-orchestrator
+        type: string
+      model:
+        description: Optional model override for Copilot coding agent
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  assign-to-copilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify service account token
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_AGENT_TOKEN }}
+        run: gh auth status
+
+      - name: Create issue and assign to Copilot coding agent
+        id: assign
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_AGENT_TOKEN }}
+          REPO: ${{ github.repository }}
+          PRD: ${{ inputs.prd }}
+          BASE_BRANCH: ${{ inputs.base_branch }}
+          CUSTOM_AGENT: ${{ inputs.custom_agent }}
+          MODEL: ${{ inputs.model }}
+        run: |
+          set -euo pipefail
+
+          title="[PRD] ${PRD}"
+          instructions=$(printf '%s\n' \
+            "Use the repository's delivery orchestration path and repository instructions." \
+            "Turn the one-line request into a compact brief and a reviewed plan before making code changes." \
+            "Implement the smallest reviewable scope that satisfies the request." \
+            "Add or update tests for changed behavior." \
+            "Run ./gradlew ktlintCheck and ./gradlew test before finishing." \
+            "Stop at a draft or reviewable pull request. A human owns merge.")
+          body=$(printf '%s\n' \
+            "## Request" \
+            "" \
+            "$PRD" \
+            "" \
+            "## Required outcome" \
+            "- Generate a compact brief and reviewed plan before editing code." \
+            "- Implement the smallest reviewable scope that satisfies the request." \
+            "- Add or update tests for changed behavior." \
+            "- Run the repository validation commands before finishing." \
+            "- Stop at a draft or reviewable pull request." \
+            "" \
+            "## Validation" \
+            "- ./gradlew ktlintCheck" \
+            "- ./gradlew test" \
+            "" \
+            "## Review loop" \
+            "- Keep follow-up work on the same pull request branch when humans mention @copilot.")
+          payload=$(jq -n \
+            --arg title "$title" \
+            --arg body "$body" \
+            --arg repo "$REPO" \
+            --arg base "$BASE_BRANCH" \
+            --arg instructions "$instructions" \
+            --arg customAgent "$CUSTOM_AGENT" \
+            --arg model "$MODEL" \
+            '{
+              title: $title,
+              body: $body,
+              assignees: ["copilot-swe-agent[bot]"],
+              agent_assignment: (
+                {
+                  target_repo: $repo,
+                  base_branch: $base,
+                  custom_instructions: $instructions,
+                  custom_agent: $customAgent
+                } + (if ($model | length) > 0 then {model: $model} else {} end)
+              )
+            }')
+          response=$(gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/$REPO/issues" \
+            --input - <<<"$payload")
+
+          issue_number=$(printf '%s' "$response" | jq -r '.number')
+          issue_url=$(printf '%s' "$response" | jq -r '.html_url')
+
+          echo "issue_number=$issue_number" >> "$GITHUB_OUTPUT"
+          echo "issue_url=$issue_url" >> "$GITHUB_OUTPUT"
+
+      - name: Write workflow summary
+        run: |
+          {
+            echo "## PRD dispatched to Copilot"
+            echo
+            echo "- Issue: ${{ steps.assign.outputs.issue_url }}"
+            echo "- Base branch: ${{ inputs.base_branch }}"
+            echo "- Custom agent: ${{ inputs.custom_agent }}"
+          } >> "$GITHUB_STEP_SUMMARY"

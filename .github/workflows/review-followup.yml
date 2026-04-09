@@ -1,0 +1,89 @@
+name: Copilot Review Follow-up
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  request-followup:
+    if: >-
+      github.event.pull_request.state == 'open' &&
+      github.event.review.state != 'approved' &&
+      github.event.review.user.login != 'copilot-swe-agent' &&
+      github.event.review.user.login != 'copilot-swe-agent[bot]' &&
+      (github.event.pull_request.user.login == 'copilot-swe-agent' || github.event.pull_request.user.login == 'copilot-swe-agent[bot]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify service account token
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_AGENT_TOKEN }}
+        run: gh auth status
+
+      - name: Build a batched follow-up comment
+        id: gather
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_AGENT_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REVIEW_ID: ${{ github.event.review.id }}
+          REVIEW_BODY: ${{ github.event.review.body }}
+          REVIEW_STATE: ${{ github.event.review.state }}
+        run: |
+          set -euo pipefail
+
+          inline_comments=$(gh api \
+            "/repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID/comments" \
+            --jq '.[] | "- \(.path)#L\(.line // .original_line // "n/a"): \(.body)"' || true)
+          delimiter=$(uuidgen)
+
+          if [ -z "$REVIEW_BODY" ] && [ -z "$inline_comments" ]; then
+            echo "should_comment=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          {
+            echo "should_comment=true"
+            echo "comment_body<<$delimiter"
+            echo "@copilot Please update this pull request on the same branch to address the latest review feedback."
+            echo
+            echo "Review state: $REVIEW_STATE"
+            if [ -n "$REVIEW_BODY" ]; then
+              echo
+              echo "Review summary:"
+              echo "$REVIEW_BODY"
+            fi
+            if [ -n "$inline_comments" ]; then
+              echo
+              echo "Inline comments:"
+              echo "$inline_comments"
+            fi
+            echo
+            echo "Validation to rerun:"
+            echo "- ./gradlew ktlintCheck"
+            echo "- ./gradlew test"
+            echo
+            echo "If any request conflicts with repository instructions or existing feedback, explain the conflict in this pull request instead of guessing."
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post follow-up comment
+        if: steps.gather.outputs.should_comment == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_AGENT_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          COMMENT_BODY: ${{ steps.gather.outputs.comment_body }}
+        run: |
+          set -euo pipefail
+          payload=$(jq -n --arg body "$COMMENT_BODY" '{body: $body}')
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/$REPO/issues/$PR_NUMBER/comments" \
+            --input - <<<"$payload"
