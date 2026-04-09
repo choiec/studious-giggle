@@ -1,6 +1,6 @@
 # studious-giggle
 
-org.cherrypick.picker 루트 패키지를 기준으로 하는 Spring Modulith 저장소다. 현재는 부트스트랩 이후 두 번째 단계로 documents 와 ingest 모듈에 실제 도메인 계약과 인메모리 persistence 경계를 추가한 상태다.
+org.cherrypick.picker 루트 패키지를 기준으로 하는 Spring Modulith 저장소다. 현재는 documents 와 ingest 모듈에 인메모리 경계와 함께 PostgreSQL, Flyway, JPA 기반 persistence 경로를 추가한 상태다.
 
 ## Accepted Layout
 
@@ -25,11 +25,18 @@ src/main/kotlin/org/cherrypick/picker
 
 - Gradle 9.3.0 wrapper 와 Kotlin DSL 빌드
 - Spring Boot 4.0.5 + Spring Modulith 2.0.5 애플리케이션 골격
-- shared, documents, ingest, indexing, retrieval, review, knowledge, ops 모듈 스캐폴드
-- documents 모듈의 repository-backed aggregate 와 in-memory persistence adapter
-- ingest 모듈의 request, parser, source storage 경계와 in-memory storage adapter
+- documents 모듈의 revision-aware aggregate, 인메모리 repository, JPA repository adapter
+- ingest 모듈의 request, parser, source storage 경계, 인메모리 storage, JPA storage adapter
+- Flyway migration 과 PostgreSQL profile 설정
+- 기본 `in-memory` 경로와 `jpa`, `jpa-test` 프로필 분리
 - ApplicationModules.of(...).verify() 구조 검증 테스트
-- documents 와 ingest 의 성공, validation failure, edge case 모듈 테스트
+- documents 와 ingest 모듈 테스트, JPA 통합 테스트
+
+## Persistence Modes
+
+- 기본 실행: `in-memory` 프로필이 기본값이며 DataSource, JPA, Flyway 자동설정을 끈다.
+- PostgreSQL 실행: `SPRING_PROFILES_ACTIVE=jpa` 와 함께 `PICKER_DATASOURCE_URL`, `PICKER_DATASOURCE_USERNAME`, `PICKER_DATASOURCE_PASSWORD` 를 제공한다.
+- JPA 검증 테스트: `jpa-test` 프로필에서 H2 PostgreSQL 호환 모드와 Flyway migration 을 사용한다.
 
 ## Chosen Stack
 
@@ -38,14 +45,14 @@ src/main/kotlin/org/cherrypick/picker
 - Gradle 9.3.0
 - Spring Boot 4.0.5
 - Spring Modulith 2.0.5
+- PostgreSQL
+- Flyway
 
-다음 스택은 아키텍처 선택으로 확정했지만, 현재는 green bootstrap 유지를 위해 실제 starter 연결을 보류했다.
+다음 스택은 아키텍처 선택으로 확정했지만, 현재는 실제 starter 연결을 보류했다.
 
 - Spring AI 2.0.0-M4
 - OpenAI
 - Qdrant
-- PostgreSQL
-- Flyway
 
 ## Validation
 
@@ -54,4 +61,4 @@ src/main/kotlin/org/cherrypick/picker
 ./gradlew --no-daemon test
 ```
 
-설계 메모는 plans/2026-04-09-modulith-bootstrap.md 와 plans/2026-04-09-documents-ingest-foundation.md 에 정리되어 있다.
+설계 메모는 plans/2026-04-09-modulith-bootstrap.md, plans/2026-04-09-documents-ingest-foundation.md, plans/2026-04-09-jpa-postgres-persistence.md 에 정리되어 있다.

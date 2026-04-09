@@ -3,10 +3,17 @@ package org.cherrypick.picker.ingest.infrastructure.storage
 import org.cherrypick.picker.ingest.domain.RawSource
 import org.cherrypick.picker.ingest.domain.SourceStorage
 import org.cherrypick.picker.ingest.domain.StoredSource
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Repository
 import java.util.LinkedHashMap
 
 @Repository
+@ConditionalOnProperty(
+    prefix = "picker.persistence",
+    name = ["mode"],
+    havingValue = "in-memory",
+    matchIfMissing = true,
+)
 internal class InMemorySourceStorage : SourceStorage {
     private val sources = LinkedHashMap<String, StoredSource>()
 

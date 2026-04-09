@@ -1,0 +1,13 @@
+spring:
+  config:
+    activate:
+      on-profile: in-memory
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+      - org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration
+      - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
+
+picker:
+  persistence:
+    mode: in-memory

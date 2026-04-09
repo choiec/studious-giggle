@@ -1,0 +1,19 @@
+spring:
+  config:
+    activate:
+      on-profile: jpa
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${PICKER_DATASOURCE_URL}
+    username: ${PICKER_DATASOURCE_USERNAME}
+    password: ${PICKER_DATASOURCE_PASSWORD}
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+picker:
+  persistence:
+    mode: jpa
