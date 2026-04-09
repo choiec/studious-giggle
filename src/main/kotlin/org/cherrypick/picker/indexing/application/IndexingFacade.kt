@@ -10,8 +10,7 @@ internal class IndexingFacade(
     private val documentQueryApi: DocumentQueryApi,
 ) : IndexingApi {
     override fun status(): IndexStatusView {
-        val canonical = documentQueryApi.getCanonicalDocument()
-        val visibleDocuments = if (canonical.id.isBlank()) 0 else 1
-        return IndexStatusView(visibleDocuments = visibleDocuments, strategy = "keyword+vector")
+        val visibleDocuments = documentQueryApi.listCurrentRetrievalDocuments().size
+        return IndexStatusView(visibleDocuments = visibleDocuments, strategy = "keyword")
     }
 }

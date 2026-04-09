@@ -8,4 +8,6 @@ interface DocumentRepository {
     fun findById(documentId: DocumentId): Document?
 
     fun findLatest(): Document?
+
+    fun findAll(): List<Document>
 }

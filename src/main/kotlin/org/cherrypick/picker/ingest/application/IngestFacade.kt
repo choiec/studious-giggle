@@ -2,6 +2,7 @@ package org.cherrypick.picker.ingest.application
 
 import org.cherrypick.picker.documents.api.DocumentCommandApi
 import org.cherrypick.picker.documents.api.dto.RegisterDocumentCommand
+import org.cherrypick.picker.documents.api.dto.RegisterDocumentSegment
 import org.cherrypick.picker.ingest.api.IngestApi
 import org.cherrypick.picker.ingest.api.dto.IngestRequest
 import org.cherrypick.picker.ingest.api.dto.IngestResult
@@ -55,7 +56,17 @@ internal class IngestFacade(
                 RegisterDocumentCommand(
                     sourceId = parsedSource.sourceId,
                     title = parsedSource.title,
-                    content = parsedSource.content,
+                    canonicalBody = parsedSource.canonicalBody,
+                    segments =
+                        parsedSource.segments.map {
+                            RegisterDocumentSegment(
+                                segmentType = it.segmentType,
+                                ordinal = it.ordinal,
+                                text = it.text,
+                                tokenEstimate = it.tokenEstimate,
+                                locator = it.locator,
+                            )
+                        },
                 ),
             )
 

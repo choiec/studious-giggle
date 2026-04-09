@@ -1,7 +1,9 @@
 package org.cherrypick.picker.documents.domain
 
+import org.cherrypick.picker.documents.api.dto.DocumentRetrievalView
 import org.cherrypick.picker.documents.api.dto.DocumentView
 import org.cherrypick.picker.documents.api.dto.RegisterDocumentCommand
+import org.cherrypick.picker.documents.api.dto.RegisterDocumentSegment
 import org.cherrypick.picker.shared.errors.ErrorCode
 import org.cherrypick.picker.shared.errors.ValidationException
 import org.cherrypick.picker.shared.hashing.ContentHash
@@ -18,13 +20,7 @@ data class Document(
 
     fun register(command: RegisterDocumentCommand): Document {
         validate(command)
-        val nextRevision =
-            DocumentRevision(
-                number = currentRevision.number + 1,
-                sourceId = command.sourceId.trim(),
-                contentHash = ContentHash.of(command.content.trim()),
-                content = command.content.trim(),
-            )
+        val nextRevision = createRevision(id, currentRevision.number + 1, command)
 
         return copy(
             title = command.title.trim(),
@@ -43,32 +39,35 @@ data class Document(
             latestSourceId = currentRevision.sourceId,
         )
 
+    fun toRetrievalView(): DocumentRetrievalView =
+        DocumentRetrievalView(
+            documentId = id.value,
+            title = title,
+            revisionNumber = currentRevision.number,
+            sourceId = currentRevision.sourceId,
+            canonicalBody = currentRevision.canonicalBody,
+            segments = currentRevision.segments.map { it.toView() },
+        )
+
     companion object {
         fun bootstrap(): Document =
             create(
                 RegisterDocumentCommand(
                     sourceId = "bootstrap",
                     title = "Canonical Document",
-                    content = "Canonical bootstrap document",
+                    canonicalBody = "Canonical bootstrap document",
                 ),
             ).copy(status = DocumentStatus.ACTIVE)
 
         fun create(command: RegisterDocumentCommand): Document {
             validate(command)
+            val documentId = idFromSource(command.sourceId)
 
             return Document(
-                id = idFromSource(command.sourceId),
+                id = documentId,
                 title = command.title.trim(),
                 status = DocumentStatus.IMPORTED,
-                revisions =
-                    listOf(
-                        DocumentRevision(
-                            number = 1,
-                            sourceId = command.sourceId.trim(),
-                            contentHash = ContentHash.of(command.content.trim()),
-                            content = command.content.trim(),
-                        ),
-                    ),
+                revisions = listOf(createRevision(documentId, 1, command)),
             )
         }
 
@@ -82,6 +81,36 @@ data class Document(
             }
 
             return DocumentId("DOC-${ContentHash.of(normalizedSourceId).value.take(8)}")
+        }
+
+        private fun createRevision(
+            documentId: DocumentId,
+            revisionNumber: Int,
+            command: RegisterDocumentCommand,
+        ): DocumentRevision {
+            val normalizedCanonicalBody = command.canonicalBody.trim()
+            return DocumentRevision(
+                number = revisionNumber,
+                sourceId = command.sourceId.trim(),
+                contentHash = ContentHash.of(normalizedCanonicalBody),
+                canonicalBody = normalizedCanonicalBody,
+                segments = normalizeSegments(documentId, revisionNumber, normalizedCanonicalBody, command.segments),
+            )
+        }
+
+        private fun normalizeSegments(
+            documentId: DocumentId,
+            revisionNumber: Int,
+            canonicalBody: String,
+            segments: List<RegisterDocumentSegment>,
+        ): List<DocumentSegment> {
+            if (segments.isEmpty()) {
+                return listOf(DocumentSegment.fallbackFor(documentId, revisionNumber, canonicalBody))
+            }
+
+            return segments.sortedBy(RegisterDocumentSegment::ordinal).map {
+                DocumentSegment.from(documentId, revisionNumber, it)
+            }
         }
 
         private fun validate(command: RegisterDocumentCommand) {
@@ -99,10 +128,28 @@ data class Document(
                 )
             }
 
-            if (command.content.isBlank()) {
+            if (command.canonicalBody.isBlank()) {
                 throw ValidationException(
                     ErrorCode.INVALID_DOCUMENT_CONTENT,
                     "Document content must not be blank",
+                )
+            }
+
+            if (command.segments.any { it.text.isBlank() || it.ordinal < 1 }) {
+                throw ValidationException(
+                    ErrorCode.INVALID_DOCUMENT_CONTENT,
+                    "Document segments must contain text and positive ordinals",
+                )
+            }
+
+            if (command.segments
+                    .map(RegisterDocumentSegment::ordinal)
+                    .distinct()
+                    .size != command.segments.size
+            ) {
+                throw ValidationException(
+                    ErrorCode.INVALID_DOCUMENT_CONTENT,
+                    "Document segments must use unique ordinals",
                 )
             }
         }

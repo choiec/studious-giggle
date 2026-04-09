@@ -20,4 +20,6 @@ internal class JpaDocumentRepositoryAdapter(
     override fun findById(documentId: DocumentId): Document? = repository.findById(documentId.value).orElse(null)?.toDomain()
 
     override fun findLatest(): Document? = repository.findTopByOrderByUpdatedAtDesc()?.toDomain()
+
+    override fun findAll(): List<Document> = repository.findAllByOrderByUpdatedAtDesc().map { it.toDomain() }
 }

@@ -30,7 +30,7 @@ class JpaPersistenceIntegrationTests(
                 RegisterDocumentCommand(
                     sourceId = "jpa-documents-revision",
                     title = "JPA Revision One",
-                    content = "first persisted revision",
+                    canonicalBody = "first persisted revision",
                 ),
             )
         val secondDocument =
@@ -38,38 +38,47 @@ class JpaPersistenceIntegrationTests(
                 RegisterDocumentCommand(
                     sourceId = "jpa-documents-revision",
                     title = "JPA Revision Two",
-                    content = "second persisted revision",
+                    canonicalBody = "second persisted revision",
                 ),
             )
 
         val storedDocument = documentQueryApi.getDocument(secondDocument.id)
+        val retrievalDocument = documentQueryApi.listCurrentRetrievalDocuments().single { it.documentId == secondDocument.id }
         val appliedMigrations = countRows("select count(*) from flyway_schema_history where success = true")
 
         assertThat(applicationContext.containsBean("dataSource")).isTrue()
         assertThat(secondDocument.id).isEqualTo(firstDocument.id)
         assertThat(storedDocument.revisionCount).isEqualTo(2)
         assertThat(storedDocument.currentRevision).isEqualTo(2)
+        assertThat(retrievalDocument.revisionNumber).isEqualTo(2)
+        assertThat(retrievalDocument.segments).hasSize(1)
+        assertThat(retrievalDocument.segments.single().text).isEqualTo("second persisted revision")
         assertThat(appliedMigrations).isGreaterThan(0)
     }
 
     @Test
-    fun jpaProfilePersistsIngestedSourcesAndDocuments() {
+    fun jpaProfilePersistsIngestedSourcesAndSegments() {
         val ingestResult =
             ingestApi.importDocument(
                 IngestRequest(
                     sourceId = "jpa-ingest-source",
                     format = "xml",
                     title = "JPA Imported Document",
-                    payload = "<document><p>Persisted through JPA</p></document>",
+                    payload = "<document><section><p>Persisted through JPA</p><p>With segment metadata</p></section></document>",
                 ),
             )
 
         val storedDocument = documentQueryApi.getDocument(ingestResult.documentId)
+        val retrievalDocument = documentQueryApi.listCurrentRetrievalDocuments().single { it.documentId == ingestResult.documentId }
         val storedSources = countRows("select count(*) from ingest_sources where source_id = ?", ingestResult.storedSourceId)
+        val storedSegments = countRows("select count(*) from document_revision_segments where document_id = ?", ingestResult.documentId)
 
         assertThat(storedDocument.title).isEqualTo("JPA Imported Document")
         assertThat(storedDocument.latestSourceId).isEqualTo("jpa-ingest-source")
         assertThat(storedSources).isEqualTo(1)
+        assertThat(storedSegments).isEqualTo(2)
+        assertThat(retrievalDocument.segments).hasSize(2)
+        assertThat(retrievalDocument.segments.first().locator).isEqualTo("/document[1]/section[1]/p[1]")
     }
 
     private fun countRows(

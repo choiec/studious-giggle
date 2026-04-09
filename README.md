@@ -1,6 +1,6 @@
 # studious-giggle
 
-org.cherrypick.picker 루트 패키지를 기준으로 하는 Spring Modulith 저장소다. 현재는 documents 와 ingest 모듈에 인메모리 경계와 함께 PostgreSQL, Flyway, JPA 기반 persistence 경로를 추가한 상태다.
+org.cherrypick.picker 루트 패키지를 기준으로 하는 Spring Modulith 저장소다. 현재는 documents 와 ingest 모듈에 canonical body, retrieval segment, PostgreSQL/Flyway/JPA persistence 경로를 추가하고, retrieval 모듈에 segment-aware keyword search 기반을 올린 상태다.
 
 ## Accepted Layout
 
@@ -25,12 +25,13 @@ src/main/kotlin/org/cherrypick/picker
 
 - Gradle 9.3.0 wrapper 와 Kotlin DSL 빌드
 - Spring Boot 4.0.5 + Spring Modulith 2.0.5 애플리케이션 골격
-- documents 모듈의 revision-aware aggregate, 인메모리 repository, JPA repository adapter
-- ingest 모듈의 request, parser, source storage 경계, 인메모리 storage, JPA storage adapter
+- documents 모듈의 revision-aware aggregate, canonical body, retrieval segment, 인메모리 repository, JPA repository adapter
+- ingest 모듈의 request, parser, source storage 경계, XML canonicalization, 인메모리 storage, JPA storage adapter
+- retrieval 모듈의 segment-aware keyword search 와 citation-like hit metadata
 - Flyway migration 과 PostgreSQL profile 설정
 - 기본 `in-memory` 경로와 `jpa`, `jpa-test` 프로필 분리
 - ApplicationModules.of(...).verify() 구조 검증 테스트
-- documents 와 ingest 모듈 테스트, JPA 통합 테스트
+- documents, ingest, indexing, retrieval 모듈 테스트와 JPA 통합 테스트
 
 ## Persistence Modes
 
@@ -61,4 +62,4 @@ src/main/kotlin/org/cherrypick/picker
 ./gradlew --no-daemon test
 ```
 
-설계 메모는 plans/2026-04-09-modulith-bootstrap.md, plans/2026-04-09-documents-ingest-foundation.md, plans/2026-04-09-jpa-postgres-persistence.md 에 정리되어 있다.
+설계 메모는 plans/2026-04-09-modulith-bootstrap.md, plans/2026-04-09-documents-ingest-foundation.md, plans/2026-04-09-jpa-postgres-persistence.md, plans/2026-04-09-canonical-segmentation-retrieval.md 에 정리되어 있다.
