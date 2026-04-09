@@ -1,7 +1,7 @@
 ---
 name: browse-operator
 description: "Use when navigating a live site, extracting information, taking screenshots, checking console or network behavior, or reproducing browser issues."
-tools: [read, search, web]
+tools: [read, search, web, playwright/*]
 argument-hint: "Target URL and browsing task"
 ---
 
