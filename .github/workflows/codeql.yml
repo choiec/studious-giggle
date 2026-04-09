@@ -48,8 +48,8 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build project
-        # CodeQL scans the production build; compiling test sources here can OOM the hosted runner.
-        run: ./gradlew --no-daemon classes
+        # Run the full production build lifecycle so CodeQL can observe Kotlin and Java compilation without running tests.
+        run: ./gradlew --no-daemon build -x test
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v4
