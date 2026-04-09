@@ -33,4 +33,9 @@ internal class InMemoryDocumentRepository : DocumentRepository {
         synchronized(this) {
             documents.values.lastOrNull()
         }
+
+    override fun findAll(): List<Document> =
+        synchronized(this) {
+            documents.values.toList().asReversed()
+        }
 }

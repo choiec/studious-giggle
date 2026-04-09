@@ -27,15 +27,18 @@ class IngestModuleTests {
                     sourceId = "ingest-success",
                     format = "xml",
                     title = "Imported Policy",
-                    payload = "<document><p>Imported Policy Content</p></document>",
+                    payload = "<document><section><p>Imported Policy Content</p><p>Second imported paragraph</p></section></document>",
                 ),
             )
 
         val storedDocument = documentQueryApi.getDocument(ingestResult.documentId)
+        val retrievalDocument = documentQueryApi.listCurrentRetrievalDocuments().single { it.documentId == ingestResult.documentId }
 
         assertThat(ingestResult.revisionNumber).isEqualTo(1)
         assertThat(storedDocument.title).isEqualTo("Imported Policy")
         assertThat(storedDocument.latestSourceId).isEqualTo("ingest-success")
+        assertThat(retrievalDocument.segments).hasSize(2)
+        assertThat(retrievalDocument.segments.first().locator).isEqualTo("/document[1]/section[1]/p[1]")
     }
 
     @Test
@@ -72,15 +75,18 @@ class IngestModuleTests {
                     sourceId = "ingest-revision",
                     format = "xml",
                     title = "Revision Two",
-                    payload = "<document><p>second import</p></document>",
+                    payload = "<document><section><p>second import</p><p>with extra context</p></section></document>",
                 ),
             )
 
         val storedDocument = documentQueryApi.getDocument(secondImport.documentId)
+        val retrievalDocument = documentQueryApi.listCurrentRetrievalDocuments().single { it.documentId == secondImport.documentId }
 
         assertThat(secondImport.documentId).isEqualTo(firstImport.documentId)
         assertThat(secondImport.revisionNumber).isEqualTo(2)
         assertThat(storedDocument.revisionCount).isEqualTo(2)
         assertThat(storedDocument.title).isEqualTo("Revision Two")
+        assertThat(retrievalDocument.revisionNumber).isEqualTo(2)
+        assertThat(retrievalDocument.segments).hasSize(2)
     }
 }

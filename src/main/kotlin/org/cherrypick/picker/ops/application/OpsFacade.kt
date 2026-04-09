@@ -24,6 +24,7 @@ internal class OpsFacade(
         val ingest = ingestApi.importSample()
         val indexing = indexingApi.status()
         val retrieval = retrievalApi.search("ops")
+        val retrievalDocumentId = retrieval.hits.firstOrNull()?.documentId ?: canonical.id
         val review = reviewApi.openQueue()
         val facts = knowledgeApi.facts()
         val summary =
@@ -31,7 +32,7 @@ internal class OpsFacade(
                 canonical.id,
                 ingest.documentId,
                 indexing.strategy,
-                retrieval.hits.first().documentId,
+                retrievalDocumentId,
                 review.taskId,
                 facts.first().subject,
             ).joinToString(separator = " | ")

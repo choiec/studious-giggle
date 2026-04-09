@@ -1,6 +1,7 @@
 package org.cherrypick.picker.documents.application
 
 import org.cherrypick.picker.documents.api.DocumentQueryApi
+import org.cherrypick.picker.documents.api.dto.DocumentRetrievalView
 import org.cherrypick.picker.documents.api.dto.DocumentView
 import org.cherrypick.picker.documents.domain.Document
 import org.cherrypick.picker.documents.domain.DocumentRepository
@@ -33,4 +34,6 @@ internal class DocumentQueryService(
     override fun findLatestDocument(): DocumentView? = documentRepository.findLatest()?.toView()
 
     override fun getCanonicalDocument(): DocumentView = findLatestDocument() ?: Document.bootstrap().toView()
+
+    override fun listCurrentRetrievalDocuments(): List<DocumentRetrievalView> = documentRepository.findAll().map { it.toRetrievalView() }
 }

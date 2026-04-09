@@ -1,5 +1,6 @@
 package org.cherrypick.picker.documents.infrastructure.persistence
 
+import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.EmbeddedId
 import jakarta.persistence.Entity
@@ -7,6 +8,8 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.MapsId
+import jakarta.persistence.OneToMany
+import jakarta.persistence.OrderBy
 import jakarta.persistence.Table
 import org.cherrypick.picker.documents.domain.DocumentRevision
 import org.cherrypick.picker.shared.hashing.ContentHash
@@ -25,27 +28,40 @@ internal class JpaDocumentRevisionEntity(
     @Column(name = "content_hash", nullable = false, length = 64)
     var contentHash: String = "",
     @Column(name = "content", nullable = false, columnDefinition = "text")
-    var content: String = "",
+    var canonicalBody: String = "",
+    @OneToMany(
+        mappedBy = "revision",
+        cascade = [CascadeType.ALL],
+        orphanRemoval = true,
+        fetch = FetchType.EAGER,
+    )
+    @OrderBy("ordinal ASC")
+    var segments: MutableList<JpaDocumentSegmentEntity> = mutableListOf(),
 ) {
     fun toDomain(): DocumentRevision =
         DocumentRevision(
             number = id.revisionNumber,
             sourceId = sourceId,
             contentHash = ContentHash(contentHash),
-            content = content,
+            canonicalBody = canonicalBody,
+            segments = segments.sortedBy { it.ordinal }.map { it.toDomain() },
         )
 
     companion object {
         fun from(
             document: JpaDocumentEntity,
             revision: DocumentRevision,
-        ): JpaDocumentRevisionEntity =
-            JpaDocumentRevisionEntity(
-                id = JpaDocumentRevisionId(document.documentId, revision.number),
-                document = document,
-                sourceId = revision.sourceId,
-                contentHash = revision.contentHash.value,
-                content = revision.content,
-            )
+        ): JpaDocumentRevisionEntity {
+            val entity =
+                JpaDocumentRevisionEntity(
+                    id = JpaDocumentRevisionId(document.documentId, revision.number),
+                    document = document,
+                    sourceId = revision.sourceId,
+                    contentHash = revision.contentHash.value,
+                    canonicalBody = revision.canonicalBody,
+                )
+            entity.segments = revision.segments.map { JpaDocumentSegmentEntity.from(entity, it) }.toMutableList()
+            return entity
+        }
     }
 }

@@ -6,5 +6,6 @@ data class DocumentRevision(
     val number: Int,
     val sourceId: String,
     val contentHash: ContentHash,
-    val content: String,
+    val canonicalBody: String,
+    val segments: List<DocumentSegment>,
 )

@@ -26,17 +26,22 @@ class DocumentsModuleTests {
                 RegisterDocumentCommand(
                     sourceId = "documents-success",
                     title = "Procurement Guide",
-                    content = "Normalized procurement content",
+                    canonicalBody = "Normalized procurement content",
                 ),
             )
 
         val storedDocument = documentQueryApi.getDocument(createdDocument.id)
+        val retrievalDocument =
+            documentQueryApi.listCurrentRetrievalDocuments().single { it.documentId == createdDocument.id }
 
         assertThat(storedDocument.id).isEqualTo(createdDocument.id)
         assertThat(storedDocument.title).isEqualTo("Procurement Guide")
         assertThat(storedDocument.currentRevision).isEqualTo(1)
         assertThat(storedDocument.revisionCount).isEqualTo(1)
         assertThat(storedDocument.latestSourceId).isEqualTo("documents-success")
+        assertThat(retrievalDocument.canonicalBody).isEqualTo("Normalized procurement content")
+        assertThat(retrievalDocument.segments).hasSize(1)
+        assertThat(retrievalDocument.segments.single().locator).isEqualTo("/document/body[1]")
     }
 
     @Test
@@ -47,7 +52,7 @@ class DocumentsModuleTests {
                     RegisterDocumentCommand(
                         sourceId = "documents-invalid",
                         title = "Invalid Document",
-                        content = " ",
+                        canonicalBody = " ",
                     ),
                 )
             }
@@ -62,7 +67,7 @@ class DocumentsModuleTests {
                 RegisterDocumentCommand(
                     sourceId = "documents-revision",
                     title = "Revision One",
-                    content = "first revision",
+                    canonicalBody = "first revision",
                 ),
             )
         val secondDocument =
@@ -70,15 +75,19 @@ class DocumentsModuleTests {
                 RegisterDocumentCommand(
                     sourceId = "documents-revision",
                     title = "Revision Two",
-                    content = "second revision",
+                    canonicalBody = "second revision",
                 ),
             )
 
         val storedDocument = documentQueryApi.getDocument(secondDocument.id)
+        val retrievalDocument =
+            documentQueryApi.listCurrentRetrievalDocuments().single { it.documentId == secondDocument.id }
 
         assertThat(secondDocument.id).isEqualTo(firstDocument.id)
         assertThat(secondDocument.currentRevision).isEqualTo(2)
         assertThat(storedDocument.revisionCount).isEqualTo(2)
         assertThat(storedDocument.title).isEqualTo("Revision Two")
+        assertThat(retrievalDocument.revisionNumber).isEqualTo(2)
+        assertThat(retrievalDocument.segments.single().text).isEqualTo("second revision")
     }
 }
